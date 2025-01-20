@@ -68,7 +68,7 @@ exports.findNearbyDriversByVehicleType = async (lat, long, vehicleType, maxDista
           $maxDistance: maxDistance,
         },
       },
-    }).select('_id username profile_url location vehicleType');
+    }).select('_id username profile_url location vehicleType pushToken');
 
     console.log(`Found ${nearbyDrivers.length} nearby drivers for ${vehicleType}`);
     return nearbyDrivers;

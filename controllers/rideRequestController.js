@@ -111,7 +111,6 @@ exports.createRideRequest = async (req, res) => {
     const driverNamespace = io.of('/driver');
     nearbyDrivers.forEach(async (driver) => {
       console.log(`Notifying driver ${driver._id} about new ride request`);
-      console.log(`driver token is ${driver.pushToken}`)
       const driverPrice = discountedPrices[driver.vehicleType];
       if (driverPrice) {
         driverNamespace.to(driver._id.toString()).emit('newRideRequest', {
