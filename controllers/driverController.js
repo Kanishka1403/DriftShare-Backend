@@ -11,7 +11,7 @@ exports.addDriver = async (req, res) => {
       return res.status(400).json({ message: 'Invalid vehicle type' });
     }
 
-    const newDriver = new Driver({
+    const newDriver = new Driver({ 
       _id: firebaseId, 
       username, 
       profile_url, 
