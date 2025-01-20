@@ -1,0 +1,439 @@
+#Add Driver
+POST https://goto-app-f13902808506.herokuapp.com/api/drivers/add
+Content-Type: application/json
+
+{
+  "firebaseId": "hjtuutuuyttyuytudascscscdsdytussuytytu",
+  "username": "John Doe"
+}
+###response
+GET  http://gotu-app/api/drivers/availability/XSnpy5nIm4PXgy0h4ntowp2qTdu2
+Content-Type: application/json
+
+####
+{
+  "message": "Driver added successfully",
+  "driver": {
+    "_id": "hjtuutuuyttyuytuytussuytytu",
+    "username": "John Doe",
+    "walletBalance": 0,
+    "isAvailable": true,
+    "isLocationOn": false,
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        0,
+        0
+      ]
+    },
+    "rideHistory": [],
+    "transactionHistory": [],
+    "averageRating": 0,
+    "totalRides": 0,
+    "__v": 0
+  }
+}
+###Add Passenger
+###
+POST https://goto-app-f13902808506.herokuapp.com/api/passengers/add
+Content-Type: application/json
+
+{
+  "firebaseId": "pssasssxsaxasxssengerss5aa6def",
+  "username": "Jane Smith"
+}
+###response
+{
+  "message": "Passenger added successfully",
+  "passenger": {
+    "_id": "pssassssenger45aa6def",
+    "username": "Jane Smith",
+    "walletBalance": 0,
+    "rideHistory": [],
+    "transactionHistory": [],
+    "__v": 0
+  }
+}
+
+### Update Driver Location
+###
+PUT https://gotu.com/api/drivers/location
+Content-Type: application/json
+
+{
+  "firebaseId": "uY3pIvAajRfHo7wrQahSC9YiDml1",
+  "lat": 40.7128,
+  "long": -74.0060,
+  "isLocationOn": true
+}
+###response
+{
+  "message": "Driver location updated successfully",
+  "driver": {
+    "location": {
+      "type": "Point",
+      "coordinates": [
+        -74.006,
+        40.7128
+      ]
+    },
+    "_id": "hjtuutuuyttyuytuytussuytytu",
+    "username": "John Doe",
+    "walletBalance": 0,
+    "isAvailable": true,
+    "isLocationOn": true,
+    "rideHistory": [],
+    "transactionHistory": [],
+    "averageRating": 0,
+    "totalRides": 0,
+    "__v": 0
+  }
+}
+###Create Ride Request
+###
+POST https://goto-app-f13902808506.herokuapp.com/api/ride-requests/create
+Content-Type: application/json
+
+{
+  "passengerId": "kFP9utnlaierVgOYjZuCKW5dsMj1",
+  "pickupLocation": {
+    "lat": 40.7128,
+    "long": -74.0060,
+    "address": "123 Main St, New York, NY 10001"
+  },
+  "vehicleType": "car-sedan",
+  "dropLocation": {
+    "lat": 40.7308,
+    "long": -73.9973,
+    "address": "Niko Ahemdabad"
+  },
+  "distance": 3.5,
+  "price": 15.50,
+  "passengerMobile": "+1234567890"
+}
+
+
+###
+GET http://localhost:3000/api/ride-requests/66f6fc66e245e5f843a527e3
+Content-Type: application/json
+
+
+###response
+{
+  "message": "Ride request accepted successfully"
+}
+###Complete Ride
+POST https://goto-app-f13902808506.herokuapp.com/api/ride-requests/complete
+Content-Type: application/json
+
+{
+  "rideRequestId": "66e34558985caea92630d94a"
+}
+
+###response
+{
+  "message": "Ride completed successfully"
+}
+###
+POST http://localhost:3000/api/passengers/update/UzseILNFXKRYQKsNaliawRAQDbE3
+Content-Type: application/json
+
+{
+  "profile_url": "sdffaxZxZXfafaf"
+}
+###Add amount 
+###
+POST http://localhost:3000/api/wallet/add-funds
+Content-Type: application/json
+
+{
+  "authKey": "jasdkadgasdjksahfgasjfhgjsfgasgfghf",
+  "userId": "LxdySygfqBYrAA0fUxpXP8oe03W2",
+  "userType": "driver",
+  "amount": 100,
+  "paymentId": "asdkjsaldkjaldjaljkjjj"
+}
+
+###response
+{
+  "message": "Amount added to wallet successfully",
+   "newBalance": 1000
+}
+###
+###Process a ride payment:
+###
+POST http://localhost:3000/api/wallet/process-ride-payment
+Content-Type: application/json
+
+{
+  "rideRequestId": "66e5d4aa21bdb48978fff010",
+  "paymentMethod": "cash"
+}
+
+###response
+{
+  "message": "Ride payment processed successfully"
+}
+
+###et transaction history
+###
+GET https://goto-app-f13902808506.herokuapp.com/api/wallet/transaction-history/passenger/pssasssxsaxasxssengerss5aa6def
+Content-Type: application/json
+
+##GET /api/wallet/transaction-history/:userType/:userId
+###response
+{
+  "transactionHistory": [
+    {
+      "_id": "33ffadd1-8740-4548-ac0e-209b2a0de6e6",
+      "userId": "hjtuutuuyttyuytuytussuytytu",
+      "userType": "driver",
+      "amount": 1000,
+      "type": "credit",
+      "paymentMethod": "card",
+      "description": "Wallet top-up",
+      "timestamp": "2024-09-04T20:02:51.237Z",
+      "__v": 0
+    },
+    {
+      "_id": "92129140-8857-4806-b388-432b0e233143",
+      "userId": "hjtuutuuyttyuytuytussuytytu",
+      "userType": "driver",
+      "amount": 1000,
+      "type": "credit",
+      "paymentMethod": "card",
+      "description": "Wallet top-up",
+      "timestamp": "2024-09-04T20:03:19.155Z",
+      "__v": 0
+    },
+    {
+      "_id": "4f920712-c35c-42ae-8dd5-38e1b82ed054",
+      "userId": "hjtuutuuyttyuytuytussuytytu",
+      "userType": "driver",
+      "amount": -1.0850000000000002,
+      "type": "debit",
+      "paymentMethod": "wallet",
+      "rideId": "66d8b72b8e4e42fda7b2b766",
+      "description": "Platform fee for cash ride",
+      "timestamp": "2024-09-04T20:10:40.380Z",
+      "__v": 0
+    }
+  ]
+}
+
+###Get ride history:
+
+GET https://goto-app-f13902808506.herokuapp.com/api/wallet/ride-history/driver/hjtuutuuyttyuytudascscscdsdytussuytytu
+Content-Type: application/json
+
+##GET /api/wallet/ride-history/:userType/:userId
+###response
+{
+  "rideHistory": [
+    {
+      "pickupLocation": {
+        "type": "Point",
+        "address": "Niko Ahemdabad",
+        "coordinates": [
+          -74.006,
+          40.7128
+        ]
+      },
+      "dropLocation": {
+        "type": "Point",
+        "address": "Niko Ahemdabad",
+        "coordinates": [
+          -73.9973,
+          40.7308
+        ]
+      },
+      "_id": "66d8b72b8e4e42fda7b2b766",
+      "passenger": "pssassssenger45aa6def",
+      "distance": 3.5,
+      "price": 15.5,
+      "status": "completed",
+      "paymentStatus": "completed",
+      "createdAt": "2024-09-04T19:38:19.911Z",
+      "__v": 0,
+      "driver": "hjtuutuuyttyuytuytussuytytu",
+      "completedAt": "2024-09-04T19:58:58.924Z",
+      "paymentMethod": "cash"
+    },
+    {
+      "pickupLocation": {
+        "type": "Point",
+        "address": "Niko Ahemdabad",
+        "coordinates": [
+          -74.006,
+          40.7128
+        ]
+      },
+      "dropLocation": {
+        "type": "Point",
+        "address": "Niko Ahemdabad",
+        "coordinates": [
+          -73.9973,
+          40.7308
+        ]
+      },
+      "_id": "66d8b72b8e4e42fda7b2b766",
+      "passenger": "pssassssenger45aa6def",
+      "distance": 3.5,
+      "price": 15.5,
+      "status": "completed",
+      "paymentStatus": "completed",
+      "createdAt": "2024-09-04T19:38:19.911Z",
+      "__v": 0,
+      "driver": "hjtuutuuyttyuytuytussuytytu",
+      "completedAt": "2024-09-04T19:58:58.924Z",
+      "paymentMethod": "cash"
+    },
+    {
+      "pickupLocation": {
+        "type": "Point",
+        "address": "Niko Ahemdabad",
+        "coordinates": [
+          -74.006,
+          40.7128
+        ]
+      },
+      "dropLocation": {
+        "type": "Point",
+        "address": "Niko Ahemdabad",
+        "coordinates": [
+          -73.9973,
+          40.7308
+        ]
+      },
+      "_id": "66d8b72b8e4e42fda7b2b766",
+      "passenger": "pssassssenger45aa6def",
+      "distance": 3.5,
+      "price": 15.5,
+      "status": "completed",
+      "paymentStatus": "completed",
+      "createdAt": "2024-09-04T19:38:19.911Z",
+      "__v": 0,
+      "driver": "hjtuutuuyttyuytuytussuytytu",
+      "completedAt": "2024-09-04T19:58:58.924Z",
+      "paymentMethod": "cash"
+    }
+  ]
+}
+###
+GET http://localhost:3000/api/wallet/get-amount/driver/hjtuutuuyttyuytudascscscdsdytussuytytu
+Content-Type: application/json
+###
+Post http://localhost:3000/api/users/add-push-token
+Content-Type: application/json
+
+###
+POST http://localhost:3000/api/admin/price
+Content-Type: application/json
+
+{
+  "pricePerKilometer": 28,
+  "vehicleType": "car-suv"
+}
+###
+Post http://localhost:3000/api/ride/feedback
+Content-Type: application/json
+
+{"userId": "dH7EzqBOUWNKstPDc3oIgsTpTva2", "userType": "passenger", "rideRequestId": "66f7033c5007307c4a8f24ec", "rating": 1.0, "comment": "dfdf"}
+###
+GET  https://gotu-app-145370efcc18.herokuapp.com/api/admin/discount
+Content-Type: application/json
+###
+GET https://gotu-app-145370efcc18.herokuapp.com/api/admin/price?vehicleType=car-sedan
+Content-Type: application/json
+
+###
+GET http://localhost:3000/api/admin/price
+Content-Type: application/json
+###
+###Socket in javascript 
+Driver Events
+
+Connect:
+socket.emit('driverConnect', { driverId: 'driver123abc' });
+
+Update Location:
+
+socket.emit('updateLocation', {
+  driverId: 'driver123abc',
+  lat: 40.7128,
+  long: -74.0060,
+  isAvailable: true
+});
+
+Accept Ride:
+
+socket.emit('acceptRide', {
+  driverId: 'driver123abc',
+  rideRequestId: '60d5ecb8b37c7a2468101214'
+});
+
+Arrived at Pickup:
+
+socket.emit('arrivedAtPickup', {
+  rideRequestId: '60d5ecb8b37c7a2468101214'
+});
+
+Start Ride:
+
+socket.emit('startRide', {
+  rideRequestId: '60d5ecb8b37c7a2468101214'
+});
+
+Complete Ride:
+
+socket.emit('completeRide', {
+  rideRequestId: '60d5ecb8b37c7a2468101214'
+});
+
+
+Passenger Events
+
+Connect:
+
+socket.emit('passengerConnect', { passengerId: 'passenger456def' });
+
+Request Nearby Drivers:
+
+socket.emit('requestNearbyDrivers', { lat: 40.7128, long: -74.0060 });
+
+Request Ride:
+
+socket.emit('requestRide', {
+  passengerId: 'passenger456def',
+  pickupLocation: { lat: 40.7128, long: -74.0060 },
+  dropLocation: { lat: 40.7308, long: -73.9973 },
+  distance: 3.5,
+  price: 15.50
+});
+
+Cancel Ride:
+
+socket.emit('cancelRide', {
+  rideRequestId: '60d5ecb8b37c7a2468101214'
+});
+
+
+///eventes listner 
+
+ // Broadcast to all passengers
+ io.of('/passenger').emit('driverLocationUpdated', driverInfo);
+ // Notify nearby passengers
+ Update Location
+  io.of('/passenger').to(passenger._id.toString()).emit('nearbyDriverUpdate', driverInfo);
+Accept Ride
+      socket.emit('rideAcceptedConfirmation', { rideRequestId });
+
+Arrived At Pickup
+        io.of('/passenger').to(rideRequest.passenger.toString()).emit('driverArrived', { rideRequestId });
+
+Start Ride
+
+ io.of('/passenger').to(rideRequest.passenger.toString()).emit('rideStarted', { rideRequestId });
+
+ Complete Ride
+ io.of('/passenger').to(rideRequest.passenger.toString()).emit('rideCompleted', { rideRequestId });

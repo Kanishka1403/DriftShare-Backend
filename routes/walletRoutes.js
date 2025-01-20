@@ -1,0 +1,13 @@
+const express = require('express');
+const router = express.Router();
+const walletController = require('../controllers/walletController');
+const withdrawalController = require('../controllers/withdrawalController');
+router.post('/add-funds', walletController.addFunds);
+router.post('/process-ride-payment', walletController.processRidePayment);
+router.get('/transaction-history/:userType/:userId', walletController.getTransactionHistory);
+router.get('/ride-history/:userType/:userId', walletController.getRideHistory);
+router.get('/get-amount/:userType/:userId', walletController.getAmmount);
+router.post('/withdrawal-request', withdrawalController.createWithdrawalRequest);
+router.post('/process-withdrawal', withdrawalController.processWithdrawalRequest);
+router.get('/withdrawal-requests', withdrawalController.getWithdrawalRequests);
+module.exports = router;
