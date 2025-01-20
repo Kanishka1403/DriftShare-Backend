@@ -111,6 +111,7 @@ exports.createRideRequest = async (req, res) => {
     const driverNamespace = io.of('/driver');
     nearbyDrivers.forEach(async (driver) => {
       console.log(`Notifying driver ${driver._id} about new ride request`);
+      console.log(`driver token is ${driver.pushToken}`)
       const driverPrice = discountedPrices[driver.vehicleType];
       if (driverPrice) {
         driverNamespace.to(driver._id.toString()).emit('newRideRequest', {
@@ -124,7 +125,7 @@ exports.createRideRequest = async (req, res) => {
           distance,
           price: driverPrice
         });
-        // if (driver.pushToken) {
+        if (driver.pushToken) {
           console.log('Sending push notification to driver');
           await sendPushNotification(driver.pushToken, 'New Ride Request', 'You have a new ride request', {
             rideRequestId: rideRequest._id,
@@ -132,7 +133,7 @@ exports.createRideRequest = async (req, res) => {
             dropLocation,
           });
           console.log('Push notification sent to driver');
-        // }
+        }
       }
     });
 
