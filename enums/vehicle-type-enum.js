@@ -5,6 +5,8 @@ const VehicleTypes = Object.freeze({
     CAR_SUV: 'car-suv',
     BIKE: 'bike',
     AUTO: 'auto',
+    SCOOTY: 'scooty',
+    LUXURY: 'luxury',
     PICKUP3: 'pickup-3-tyre',
      PICKUP4: 'pickup-4-tyre'
   });
