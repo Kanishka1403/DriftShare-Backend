@@ -124,7 +124,7 @@ exports.createRideRequest = async (req, res) => {
           distance,
           price: driverPrice
         });
-        if (driver.pushToken) {
+        // if (driver.pushToken) {
           console.log('Sending push notification to driver');
           await sendPushNotification(driver.pushToken, 'New Ride Request', 'You have a new ride request', {
             rideRequestId: rideRequest._id,
@@ -132,7 +132,7 @@ exports.createRideRequest = async (req, res) => {
             dropLocation,
           });
           console.log('Push notification sent to driver');
-        }
+        // }
       }
     });
 
