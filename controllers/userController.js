@@ -5,6 +5,7 @@ exports.addPushToken = async (req, res) => {
   try {
     const { userId, pushToken, userType } = req.body;
 
+    console.log(userId, pushToken, userType)
     if (!userId || !pushToken || !userType) {
       return res.status(400).json({ message: 'User ID, push token, and user type are required' });
     }

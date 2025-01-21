@@ -39,8 +39,14 @@ exports.createRideRequest = async (req, res) => {
       vehicleType
     } = req.body;
 
+    if (!passengerId) {
+      return res.status(400).json({ message: 'Passenger ID is required' });
+    }
     const passenger = await Passenger.findById(passengerId);
 
+    if (!passenger) {
+      return res.status(404).json({ message: 'Passenger not found' });
+    }
     // Determine which vehicle types to consider
     let consideredTypes = [vehicleType];
     if (vehicleType === VehicleTypes.CAR_ANY) {
