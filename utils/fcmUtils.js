@@ -11,7 +11,7 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-exports.sendPushNotification = async (token, title, body, data = {}) => {
+exports.sendPushNotification = async (token, title, body, data = {}, sound) => {
   const stringifiedData = Object.fromEntries(
       Object.entries(data).map(([key, value]) => [key, String(value)])
   );
@@ -19,7 +19,8 @@ exports.sendPushNotification = async (token, title, body, data = {}) => {
   const message = {
       notification: {
           title,
-          body
+          body,
+          sound
       },
       data: stringifiedData, 
       token

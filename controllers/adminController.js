@@ -141,7 +141,7 @@ exports.getDiscount = async (req, res) => {
     });
 
     if (!discount) {
-      return res.status(404).json({ message: 'No active discount found' });
+      return res.status(200).json({ message: 'No active discount found' });
     }
 
     res.status(200).json({

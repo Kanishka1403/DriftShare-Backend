@@ -136,7 +136,7 @@ exports.createRideRequest = async (req, res) => {
             rideRequestId: rideRequest._id,
             pickupLocation,
             dropLocation,
-          });
+          },'loud_alarm_sound.mp3');
           console.log('Push notification sent to driver');
         }
       }
