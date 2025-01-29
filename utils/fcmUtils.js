@@ -20,10 +20,21 @@ exports.sendPushNotification = async (token, title, body, data = {}, sound) => {
       notification: {
           title,
           body,
-          sound
       },
-      data: stringifiedData, 
-      token
+      data: stringifiedData,
+      token,
+      android: {
+          notification: {
+              sound: sound || "default"
+          }
+      },
+      apns: {
+          payload: {
+              aps: {
+                  sound: sound || "default"
+              }
+          }
+      }
   };
 
   try {
@@ -35,3 +46,4 @@ exports.sendPushNotification = async (token, title, body, data = {}, sound) => {
       throw error;
   }
 };
+
