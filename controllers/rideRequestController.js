@@ -311,6 +311,32 @@ exports.completeRide = async (req, res) => {
     rideRequest.completedAt = new Date();
     await rideRequest.save();
 
+     // Final price of the ride
+     const finalPrice = rideRequest.finalPrice;
+
+     if (!finalPrice || finalPrice <= 0) {
+       return res.status(400).json({ message: 'Invalid ride price' });
+     }
+ 
+     // Payment processing if wallet method is used
+     if (rideRequest.paymentMethod === 'wallet') {
+       const passenger = rideRequest.passenger;
+       const driver = rideRequest.driver;
+ 
+       // Check if passenger has enough balance
+       if (passenger.walletBalance < finalPrice) {
+         return res.status(400).json({ message: 'Insufficient wallet balance' });
+       }
+ 
+       // Deduct amount from passenger's wallet
+       passenger.walletBalance -= finalPrice;
+       await passenger.save();
+ 
+       // Add amount to driver's wallet
+       driver.walletBalance += finalPrice;
+       await driver.save();
+     }
+     
     const driver = await Driver.findById(rideRequest.driver);
     if (driver) {
       driver.isAvailable = true;
