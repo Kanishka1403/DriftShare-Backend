@@ -320,8 +320,8 @@ exports.completeRide = async (req, res) => {
  
      // Payment processing if wallet method is used
      if (rideRequest.paymentMethod === 'wallet') {
-       const passenger = rideRequest.passenger;
-       const driver = rideRequest.driver;
+    const passenger = await Passenger.findById(rideRequest.passenger);
+    const driver = await Driver.findById(rideRequest.driver);
  
        // Check if passenger has enough balance
        if (passenger.walletBalance < finalPrice) {
@@ -336,7 +336,7 @@ exports.completeRide = async (req, res) => {
        driver.walletBalance += finalPrice;
        await driver.save();
      }
-     
+
     const driver = await Driver.findById(rideRequest.driver);
     if (driver) {
       driver.isAvailable = true;
