@@ -412,7 +412,7 @@ exports.completeRide = async (req, res) => {
       passenger.rideHistory.push(rideRequestId);
 
       const transaction = new Transaction({
-        _id: new mongoose.Types.ObjectId().toString(),
+        _id: uuidv4(),
         userId: rideRequest.passenger,
         userType: 'passenger',
         amount: finalPrice,
