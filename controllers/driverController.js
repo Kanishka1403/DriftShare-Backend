@@ -22,6 +22,7 @@ exports.addDriver = async (req, res) => {
     await newDriver.save();
     res.status(201).json({ message: 'Driver added successfully', driver: newDriver });
   } catch (error) {
+    console.log(`Error adding driver ${error}`)
     res.status(500).json({ message: 'Error adding driver', error: error.message });
   }
 };
