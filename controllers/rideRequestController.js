@@ -141,12 +141,6 @@ exports.createRideRequest = async (req, res) => {
     console.log(
       `Found ${nearbyDrivers.length} nearby drivers for ${vehicleType}`
     );
-    if (preferredGender !== "any") {
-      nearbyDrivers = nearbyDrivers.filter(
-        (driver) => driver.gender === preferredGender
-      );
-      console.log(`Filtered drivers by gender (${preferredGender}): ${nearbyDrivers.length}`);
-    }
 
     const io = socketHandlers.getIO();
     const driverNamespace = io.of("/driver");

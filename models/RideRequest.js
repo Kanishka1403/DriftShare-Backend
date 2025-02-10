@@ -43,7 +43,8 @@ const RideRequestSchema = new mongoose.Schema({
     address: { type: String, required: true },
     coordinates: { type: [Number], required: true }
   },
-  preferredGender: { type: String, enum: ['male', 'female', 'any'], default: 'any' },
+  preferredGender: { type: String, enum: ['male', 'female', 'any'], default: 'any' }, // Added preferred gender field
+
   distance: { type: Number, required: true },
   price: { type: Number, required: false },
   status: { type: String, enum: ['pending', 'accepted', 'in_progress', 'completed', 'cancelled', 'failed'], default: 'pending' },
