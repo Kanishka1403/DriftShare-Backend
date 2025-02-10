@@ -43,7 +43,7 @@ const RideRequestSchema = new mongoose.Schema({
     address: { type: String, required: true },
     coordinates: { type: [Number], required: true }
   },
-  preferredGender: { type: String, enum: ['male', 'female', 'any'], default: 'any' }, // Added preferred gender field
+  preferredGender: { type: String, enum: ['Male', 'Female', 'any'], default: 'any' }, // Added preferred gender field
 
   distance: { type: Number, required: true },
   price: { type: Number, required: false },
