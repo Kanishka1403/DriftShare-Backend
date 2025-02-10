@@ -412,13 +412,15 @@ exports.completeRide = async (req, res) => {
       passenger.rideHistory.push(rideRequestId);
 
       const transaction = new Transaction({
-        _id: uuidv4(),
+        _id: new mongoose.Types.ObjectId().toString(),
         userId: rideRequest.passenger,
         userType: 'passenger',
         amount: finalPrice,
         type: 'debit',
         paymentMethod: rideRequest.paymentMethod,
         rideId: rideRequestId,
+        description: `⁠ Payment for ride ${rideRequestId} ⁠`,
+        timestamp: new Date()
       });
       await transaction.save();
 
