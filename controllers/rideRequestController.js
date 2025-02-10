@@ -10,6 +10,8 @@ const Discount = require("../models/Discount");
 const VehicleTypes = require("../enums/vehicle-type-enum");
 const { sendPushNotification } = require("../utils/fcmUtils");
 const Transaction = require('../models/Transaction');
+const { v4: uuidv4 } = require('uuid');
+
 exports.getRideRequestStatus = async (req, res) => {
   try {
     const { rideRequestId } = req.params;
