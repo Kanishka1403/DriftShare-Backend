@@ -8,7 +8,6 @@ const TransactionSchema = new mongoose.Schema({
     type: { type: String, enum: ['credit', 'debit'], required: true },
     paymentMethod: { type: String, enum: ['wallet', 'cash', 'card','upi'], required: true },
     rideId: { type: String, ref: 'RideRequest' },
-    description: String,
     timestamp: { type: Date, default: Date.now }
   });
 

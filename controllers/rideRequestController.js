@@ -9,7 +9,7 @@ const Price = require("../models/Price");
 const Discount = require("../models/Discount");
 const VehicleTypes = require("../enums/vehicle-type-enum");
 const { sendPushNotification } = require("../utils/fcmUtils");
-
+const Transaction = require('../models/Transaction');
 exports.getRideRequestStatus = async (req, res) => {
   try {
     const { rideRequestId } = req.params;
@@ -355,6 +355,7 @@ exports.provideFeedback = async (req, res) => {
       .json({ message: "Error providing feedback", error: error.message });
   }
 };
+
 exports.completeRide = async (req, res) => {
   try {
     const { rideRequestId } = req.body;
@@ -408,7 +409,20 @@ exports.completeRide = async (req, res) => {
 
     const passenger = await Passenger.findById(rideRequest.passenger);
     if (passenger) {
-      driver.rideHistory.push(rideRequestId);
+      passenger.rideHistory.push(rideRequestId);
+
+      const transaction = new Transaction({
+        _id: uuidv4(),
+        userId: rideRequest.passenger,
+        userType: 'passenger',
+        amount: finalPrice,
+        type: 'debit',
+        paymentMethod: rideRequest.paymentMethod,
+        rideId: rideRequestId,
+      });
+      await transaction.save();
+
+      passenger.transactionHistory.push(transaction._id);
       await passenger.save();
     }
 
