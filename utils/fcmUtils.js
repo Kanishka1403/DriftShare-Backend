@@ -29,12 +29,18 @@ exports.sendPushNotification = async (token, title, body, data = {}, sound) => {
           }
       },
       apns: {
-          payload: {
-              aps: {
-                  sound: sound || "default"
-              }
-          }
-      }
+        payload: {
+            aps: {
+                "content-available": 1,  
+                "mutable-content": 1,   
+                sound: "loud_alarm_sound.mp3"
+            }
+        },
+        headers: {
+            "apns-priority": "10",
+            "apns-push-type": "alert"
+        }
+    }
   };
 
   try {

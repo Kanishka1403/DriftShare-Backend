@@ -48,35 +48,42 @@ exports.findNearbyPassengers = async (lat, long, maxDistance = 2000) => {
   }
 };
 
-exports.findNearbyDriversByVehicleType = async (lat, long, vehicleType, maxDistance = 2000) => {
+exports.findNearbyDriversByVehicleType = async (lat, long, vehicleType, preferredGender = "any", maxDistance = 2000) => {
   try {
     let vehicleTypes = [vehicleType];
     if (vehicleType === VehicleTypes.CAR_ANY) {
       vehicleTypes = [VehicleTypes.CAR_MINI, VehicleTypes.CAR_SEDAN, VehicleTypes.CAR_SUV];
     }
 
-    const nearbyDrivers = await Driver.find({
+    let query = {
       isLocationOn: true,
       isAvailable: true,
       vehicleType: { $in: vehicleTypes },
       location: {
         $nearSphere: {
           $geometry: {
-            type: 'Point',
+            type: "Point",
             coordinates: [long, lat],
           },
           $maxDistance: maxDistance,
         },
       },
-    }).select('_id username profile_url location vehicleType pushToken');
+    };
 
-    console.log(`Found ${nearbyDrivers.length} nearby drivers for ${vehicleType}`);
+    if (preferredGender !== "any") {
+      query.gender = preferredGender;
+    }
+
+    const nearbyDrivers = await Driver.find(query).select("_id username profile_url location vehicleType pushToken gender");
+
+    console.log(`Found ${nearbyDrivers.length} nearby drivers for ${vehicleType} with gender preference: ${preferredGender}`);
     return nearbyDrivers;
   } catch (error) {
-    console.error('Error finding nearby drivers:', error);
+    console.error("Error finding nearby drivers:", error);
     throw error;
   }
 };
+
 
 exports.updateDriverLocation = async (driverId, lat, long) => {
   try {

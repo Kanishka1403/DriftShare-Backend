@@ -7,6 +7,7 @@ const DriverSchema = new mongoose.Schema({
   walletBalance: { type: Number, default: 0 },
   isAvailable: { type: Boolean, default: true },
   isLocationOn: { type: Boolean, default: false },
+  gender: { type: String, enum: ['male', 'female', 'other'], required: false }, 
   upiId: { type: String },
   mobileNumber: { type: String },
   vehicleType: {
