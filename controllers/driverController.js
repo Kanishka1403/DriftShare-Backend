@@ -5,17 +5,19 @@ const socketHandlers = require('../services/socketHandlers');
 const VehicleTypes = require('../enums/vehicle-type-enum');
 exports.addDriver = async (req, res) => {
   try {
-    const { firebaseId, username, profile_url, vehicleType } = req.body;
+    const { firebaseId, username, profile_url, vehicleType, gender } = req.body;
     
     if (!Object.values(VehicleTypes).includes(vehicleType)) {
       return res.status(400).json({ message: 'Invalid vehicle type' });
     }
 
+    console.log(`gender ${gender}`)
     const newDriver = new Driver({ 
       _id: firebaseId, 
       username, 
       profile_url, 
-      vehicleType 
+      vehicleType,
+      gender
     });
     await newDriver.save();
     res.status(201).json({ message: 'Driver added successfully', driver: newDriver });
