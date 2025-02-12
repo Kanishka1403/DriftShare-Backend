@@ -5,6 +5,7 @@ const TransactionSchema = new mongoose.Schema({
     userId: { type: String, required: true }, // Driver or Passenger ID
     userType: { type: String, enum: ['driver', 'passenger'], required: true },
     amount: { type: Number, required: true },
+    description: { type: String, required: false },
     type: { type: String, enum: ['credit', 'debit'], required: true },
     paymentMethod: { type: String, enum: ['wallet', 'cash', 'card','upi'], required: true },
     rideId: { type: String, ref: 'RideRequest' },

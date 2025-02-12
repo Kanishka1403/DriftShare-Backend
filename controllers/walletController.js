@@ -79,6 +79,8 @@ exports.processRidePayment = async (req, res) => {
     const rideAmount = ride.finalPrice;
     const driverAmount = rideAmount * 0.93; // 7% platform fee
     const platformFee = rideAmount * 0.07;
+    const driverTotalAmount = rideAmount; // Store full amount first
+    const driverFinalAmount = rideAmount - platformFee; // After platform fee cut
 
     if (paymentMethod === 'wallet') {
       if (passenger.walletBalance < rideAmount) {
@@ -87,6 +89,20 @@ exports.processRidePayment = async (req, res) => {
 
       passenger.walletBalance -= rideAmount;
       driver.walletBalance += driverAmount;
+
+      const driverTotalTransaction = new Transaction({
+        _id: uuidv4(),
+        userId: driver._id,
+        userType: 'driver',
+        amount: driverTotalAmount,
+        type: 'credit',
+        paymentMethod: 'wallet',
+        rideId: ride._id,
+        description: 'Ride earnings'
+      });
+
+      await driverTotalTransaction.save();
+      driver.transactionHistory.push(driverTotalTransaction._id);
 
       const passengerTransaction = new Transaction({
         _id: uuidv4(),
