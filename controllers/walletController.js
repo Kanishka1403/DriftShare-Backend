@@ -64,6 +64,8 @@ exports.processRidePayment = async (req, res) => {
   try {
     const { rideRequestId, paymentMethod } = req.body;
 
+    console.log("Ride Request ID", rideRequestId);
+    console.log("Payment Method", paymentMethod);
     const ride = await RideRequest.findById(rideRequestId);
     if (!ride) {
       return res.status(404).json({ message: 'Ride not found' });
@@ -101,6 +103,7 @@ exports.processRidePayment = async (req, res) => {
         description: 'Ride earnings'
       });
 
+      console.log("Ride Amount added", rideAmount);
       await driverTotalTransaction.save();
       driver.transactionHistory.push(driverTotalTransaction._id);
 
@@ -195,6 +198,7 @@ exports.processRidePayment = async (req, res) => {
 
     res.status(200).json({ message: 'Ride payment processed successfully' });
   } catch (error) {
+    console.log("error", error);
     res.status(500).json({ message: 'Error processing ride payment', error: error.message });
   }
 };
