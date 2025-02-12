@@ -386,7 +386,7 @@ exports.completeRide = async (req, res) => {
       return res.status(400).json({ message: "Invalid ride price" });
     }
 
-    if (rideRequest.paymentMethod === "Wallet") {
+    if (rideRequest.paymentMethod === "wallet") {
       const passenger = await Passenger.findById(rideRequest.passenger);
       const driver = await Driver.findById(rideRequest.driver);
 

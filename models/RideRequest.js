@@ -49,7 +49,7 @@ const RideRequestSchema = new mongoose.Schema({
   price: { type: Number, required: false },
   status: { type: String, enum: ['pending', 'accepted', 'in_progress', 'completed', 'cancelled', 'failed'], default: 'pending' },
   paymentStatus: { type: String, enum: ['pending', 'completed'], default: 'pending' },
-  paymentMethod: { type: String, enum: ['Wallet', 'Cash', 'card'] },
+  paymentMethod: { type: String, enum: ['wallet', 'cash', 'card'] },
   notifiedDrivers: [{ type: String, ref: 'Driver' }],
   feedback: {
     rating: { type: Number, min: 1, max: 5 },
