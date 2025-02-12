@@ -7,7 +7,7 @@ const TransactionSchema = new mongoose.Schema({
     amount: { type: Number, required: true },
     description: { type: String, required: false },
     type: { type: String, enum: ['credit', 'debit'], required: true },
-    paymentMethod: { type: String, enum: ['wallet', 'cash', 'card','upi'], required: true },
+    paymentMethod: { type: String, enum: ['Wallet', 'Cash', 'card','upi'], required: true },
     rideId: { type: String, ref: 'RideRequest' },
     timestamp: { type: Date, default: Date.now }
   });

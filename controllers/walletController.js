@@ -84,7 +84,7 @@ exports.processRidePayment = async (req, res) => {
     const driverTotalAmount = rideAmount; // Store full amount first
     const driverFinalAmount = rideAmount - platformFee; // After platform fee cut
 
-    if (paymentMethod === 'wallet') {
+    if (paymentMethod === 'Wallet') {
       if (passenger.walletBalance < rideAmount) {
         return res.status(400).json({ message: 'Insufficient wallet balance' });
       }
@@ -98,7 +98,7 @@ exports.processRidePayment = async (req, res) => {
         userType: 'driver',
         amount: driverTotalAmount,
         type: 'credit',
-        paymentMethod: 'wallet',
+        paymentMethod: 'Wallet',
         rideId: ride._id,
         description: 'Ride earnings'
       });
@@ -113,7 +113,7 @@ exports.processRidePayment = async (req, res) => {
         userType: 'passenger',
         amount: -rideAmount,
         type: 'debit',
-        paymentMethod: 'wallet',
+        paymentMethod: 'Wallet',
         rideId: ride._id,
         description: 'Ride payment'
       });
@@ -124,7 +124,7 @@ exports.processRidePayment = async (req, res) => {
         userType: 'driver',
         amount: driverAmount,
         type: 'credit',
-        paymentMethod: 'wallet',
+        paymentMethod: 'Wallet',
         rideId: ride._id,
         description: 'Ride earnings'
       });
@@ -135,7 +135,7 @@ exports.processRidePayment = async (req, res) => {
       passenger.transactionHistory.push(passengerTransaction._id);
       driver.transactionHistory.push(driverTransaction._id);
 
-    } else if (paymentMethod === 'cash') {
+    } else if (paymentMethod === 'Cash') {
       if (driver.walletBalance < platformFee) {
         return res.status(400).json({ message: 'Insufficient driver wallet balance for platform fee' });
       }
@@ -148,7 +148,7 @@ exports.processRidePayment = async (req, res) => {
         userType: 'driver',
         amount: -platformFee,
         type: 'debit',
-        paymentMethod: 'wallet',
+        paymentMethod: 'Wallet',
         rideId: ride._id,
         description: 'Platform fee for cash ride'
       });
