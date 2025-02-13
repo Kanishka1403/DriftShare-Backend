@@ -62,7 +62,7 @@ exports.addFunds = async (req, res) => {
 
 exports.processRidePayment = async (req, res) => {
   try {
-    const { rideRequestId, paymentMethod } = req.body;
+    const { rideRequestId } = req.body;
 
     console.log("Ride Request ID", rideRequestId);
     console.log("Payment Method", paymentMethod);
@@ -71,6 +71,7 @@ exports.processRidePayment = async (req, res) => {
       return res.status(404).json({ message: 'Ride not found' });
     }
 
+    const paymentMethod = ride.paymentMethod;
     const passenger = await Passenger.findById(ride.passenger);
     const driver = await Driver.findById(ride.driver);
 
