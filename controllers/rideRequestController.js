@@ -172,7 +172,6 @@ exports.createRideRequest = async (req, res) => {
               pickupLocation,
               dropLocation,
             },
-            "loud_alarm_sound.caf"
           );
           console.log("Push notification sent to driver");
         }
