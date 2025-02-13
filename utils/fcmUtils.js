@@ -33,7 +33,7 @@ exports.sendPushNotification = async (token, title, body, data = {}, sound) => {
             aps: {
                 "content-available": 1,  
                 "mutable-content": 1,   
-                sound: "loud_alarm_sound.mp3"
+                // sound: "loud_alarm_sound.mp3"
             }
         },
         headers: {
