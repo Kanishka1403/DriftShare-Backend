@@ -5,6 +5,7 @@ const RideRequestSchema = new mongoose.Schema({
   passenger: { type: String, ref: 'Passenger', required: true },
   driver: { type: String, ref: 'Driver' },
   driverNumber:{type: String},
+  passengerMobile:{type: String},
   driverImage: { type: String },
   driverName: { type: String },
   passengerImage: { type: String },
