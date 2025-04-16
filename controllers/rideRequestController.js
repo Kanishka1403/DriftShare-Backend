@@ -51,8 +51,8 @@ exports.createRideRequest = async (req, res) => {
       isSharing = false,
     } = req.body;
 
-    if (!passengerId || !pickupLocation || !dropLocation || !distance) {
-      return res.status(400).json({ message: "Missing required fields" });
+    if (!passengerId || !pickupLocation?.coordinates || !dropLocation?.coordinates || !distance) {
+      return res.status(400).json({ message: "Missing required fields or coordinates" });
     }
 
     const passenger = await Passenger.findById(passengerId);
@@ -81,9 +81,10 @@ exports.createRideRequest = async (req, res) => {
 
     vehiclePrices.forEach(vp => {
       const basePrice = vp.pricePerKilometer * distance;
+      const finalPrice = calculatePrice(basePrice);
       prices[vp.vehicleType] = basePrice;
-      discountedPrices[vp.vehicleType] = calculatePrice(basePrice);
-      perPassengerPrices[vp.vehicleType] = calculatePrice(basePrice); // initially single rider
+      discountedPrices[vp.vehicleType] = finalPrice;
+      perPassengerPrices[vp.vehicleType] = finalPrice;
     });
 
     const getMaxPassengers = (vt) => vt === VehicleTypes.CAR_SUV ? 6 : 4;
@@ -119,11 +120,9 @@ exports.createRideRequest = async (req, res) => {
         existingRide.passengers.push(passengerId);
         existingRide.currentPassengers += 1;
 
-        // Update perPassengerPrices
         Object.keys(existingRide.discountedPrices).forEach(vt => {
-          existingRide.perPassengerPrices.set(vt, 
-            existingRide.discountedPrices.get(vt) / existingRide.currentPassengers
-          );
+          const newPrice = existingRide.discountedPrices[vt] / existingRide.currentPassengers;
+          existingRide.perPassengerPrices[vt] = newPrice;
         });
 
         await existingRide.save();
@@ -132,7 +131,7 @@ exports.createRideRequest = async (req, res) => {
         return res.status(201).json({
           message: "Joined existing shared ride",
           rideRequestId: existingRide._id,
-          price: existingRide.perPassengerPrices.get(vehicleType),
+          price: existingRide.perPassengerPrices[vehicleType],
         });
       }
     }
@@ -197,14 +196,13 @@ exports.createRideRequest = async (req, res) => {
       }
     });
 
+    // Timeout fallback
     setTimeout(async () => {
       const updatedRide = await RideRequest.findById(rideRequest._id);
       if (updatedRide?.status === "pending") {
         updatedRide.status = "failed";
         await updatedRide.save();
-        io.of("/passenger")
-          .to(passengerId)
-          .emit("rideRequestFailed", { rideRequestId: rideRequest._id });
+        io.of("/passenger").to(passengerId).emit("rideRequestFailed", { rideRequestId: rideRequest._id });
       }
     }, 120000);
 
@@ -219,6 +217,7 @@ exports.createRideRequest = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 
 exports.acceptRideRequest = async (req, res) => {
