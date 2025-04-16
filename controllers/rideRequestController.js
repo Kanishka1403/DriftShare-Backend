@@ -51,73 +51,54 @@ exports.createRideRequest = async (req, res) => {
       isSharing = false,
     } = req.body;
 
-    if (!passengerId) {
-      return res.status(400).json({ message: "Passenger ID is required" });
+    // Validate required fields
+    if (!passengerId || !pickupLocation || !dropLocation || !distance) {
+      return res.status(400).json({ message: "Missing required fields" });
     }
-    const passenger = await Passenger.findById(passengerId);
 
+    const passenger = await Passenger.findById(passengerId);
     if (!passenger) {
       return res.status(404).json({ message: "Passenger not found" });
     }
+
+    // Shared rides must specify vehicle type
     if (isSharing && vehicleType === VehicleTypes.CAR_ANY) {
-      await session.abortTransaction();
-      return res.status(400).json({ message: "Shared rides require a specific vehicle type" });
-    }
-    // Determine which vehicle types to consider
-    let consideredTypes = [vehicleType];
-    if (vehicleType === VehicleTypes.CAR_ANY) {
-      consideredTypes = [
-        VehicleTypes.CAR_MINI,
-        VehicleTypes.CAR_SEDAN,
-        VehicleTypes.CAR_SUV,
-      ];
+      return res.status(400).json({ 
+        message: "Shared rides require a specific vehicle type (Mini, Sedan, SUV)" 
+      });
     }
 
-    // Fetch prices for considered vehicle types
-    const vehiclePrices = await Price.find({
-      vehicleType: { $in: consideredTypes },
-    });
+    // Determine vehicle types to consider
+    const consideredTypes = vehicleType === VehicleTypes.CAR_ANY
+      ? [VehicleTypes.CAR_MINI, VehicleTypes.CAR_SEDAN, VehicleTypes.CAR_SUV]
+      : [vehicleType];
+
+    // Get pricing
+    const vehiclePrices = await Price.find({ vehicleType: { $in: consideredTypes } });
     const discount = await Discount.findOne({ isActive: true });
+    const discountPercentage = (discount && new Date() >= discount.validFrom && new Date() <= discount.validTo)
+      ? discount.percentage
+      : 0;
 
-    let discountPercentage = 0;
-    if (
-      discount &&
-      new Date() >= discount.validFrom &&
-      new Date() <= discount.validTo
-    ) {
-      discountPercentage = discount.percentage;
-    }
-
-    const calculateDiscountedPrice = (basePrice) => {
-      return basePrice - basePrice * (discountPercentage / 100);
-    };
-
-    // Calculate prices for considered vehicle types
+    // Calculate prices
+    const calculatePrice = (basePrice) => basePrice - (basePrice * discountPercentage / 100);
     const prices = {};
     const discountedPrices = {};
-    vehiclePrices.forEach((vp) => {
+    
+    vehiclePrices.forEach(vp => {
       const basePrice = vp.pricePerKilometer * distance;
       prices[vp.vehicleType] = basePrice;
-      discountedPrices[vp.vehicleType] = calculateDiscountedPrice(basePrice);
+      discountedPrices[vp.vehicleType] = calculatePrice(basePrice);
     });
 
-    console.log(`Original prices: ${JSON.stringify(prices)}`);
-    console.log(`Discounted prices: ${JSON.stringify(discountedPrices)}`);
+    // Ride-sharing logic
+    const getMaxPassengers = (vt) => vt === VehicleTypes.CAR_SUV ? 6 : 4;
 
     if (isSharing) {
-      // Define max passengers based on vehicle type
-      const getMaxPassengers = (vt) => {
-        switch (vt) {
-          case VehicleTypes.CAR_SUV: return 6;
-          default: return 4; // CAR_MINI, CAR_SEDAN
-        }
-      };
-
-      // Find existing matching shared ride
       const existingRide = await RideRequest.findOne({
         isShareable: true,
         vehicleType,
-        status: "pending",
+        status: 'pending',
         currentPassengers: { $lt: getMaxPassengers(vehicleType) },
         "pickupLocation.coordinates": {
           $nearSphere: {
@@ -137,38 +118,35 @@ exports.createRideRequest = async (req, res) => {
             $maxDistance: 1000,
           },
         },
-      }).session(session);
+      });
 
-      // If matching ride found, join it
       if (existingRide) {
+        // Join existing ride
         existingRide.passengers.push(passengerId);
         existingRide.currentPassengers += 1;
+        
+        // Update split prices
+        Object.keys(existingRide.discountedPrices).forEach(vt => {
+          existingRide.perPassengerPrices[vt] = 
+            existingRide.discountedPrices[vt] / existingRide.currentPassengers;
+        });
 
-        // Update per-passenger price (split equally)
-        for (const [vt, price] of Object.entries(existingRide.totalDiscountedPrices)) {
-          existingRide.perPassengerPrices.set(vt, price / existingRide.currentPassengers);
-        }
+        await existingRide.save();
+        await Passenger.findByIdAndUpdate(passengerId, { 
+          $push: { rideHistory: existingRide._id } 
+        });
 
-        await existingRide.save({ session });
-        await Passenger.findByIdAndUpdate(
-          passengerId,
-          { $push: { rideHistory: existingRide._id } },
-          { session }
-        );
-
-        await session.commitTransaction();
         return res.status(201).json({
           message: "Joined existing shared ride",
           rideRequestId: existingRide._id,
-          price: existingRide.perPassengerPrices.get(vehicleType),
+          price: existingRide.perPassengerPrices[vehicleType],
         });
       }
     }
 
-    // ===== CREATE NEW RIDE REQUEST =====
+    // Create new ride
     const rideRequest = new RideRequest({
       paymentMethod,
-      passenger: passengerId,
       passengers: [passengerId],
       isShareable: isSharing,
       currentPassengers: 1,
@@ -179,44 +157,41 @@ exports.createRideRequest = async (req, res) => {
       pickupLocation: {
         type: "Point",
         address: pickupLocation.address,
-        coordinates: [pickupLocation.long, pickupLocation.lat],
+        coordinates: pickupLocation.coordinates,
       },
       dropLocation: {
         type: "Point",
         address: dropLocation.address,
-        coordinates: [dropLocation.long, dropLocation.lat],
+        coordinates: dropLocation.coordinates,
       },
       distance,
       originalPrices: prices,
-      totalDiscountedPrices: discountedPrices,
-      perPassengerPrices: discountedPrices, // Initially same as total (for solo rides)
+      discountedPrices,
+      perPassengerPrices: discountedPrices, // Initial price (will split if others join)
       appliedDiscountPercentage: discountPercentage,
       passengerMobile,
       status: "pending",
       preferredGender,
     });
 
-    await rideRequest.save({ session });
-    await Passenger.findByIdAndUpdate(
-      passengerId,
-      { $push: { rideHistory: rideRequest._id } },
-      { session }
-    );
+    await rideRequest.save();
+    await Passenger.findByIdAndUpdate(passengerId, { 
+      $push: { rideHistory: rideRequest._id } 
+    });
 
-    // Notify nearby drivers
+    // Notify drivers
     const nearbyDrivers = await findNearbyDriversByVehicleType(
-      pickupLocation.lat,
-      pickupLocation.long,
+      pickupLocation.coordinates[1],
+      pickupLocation.coordinates[0],
       vehicleType,
       preferredGender
     );
 
     const io = socketHandlers.getIO();
-    const driverNamespace = io.of("/driver");
-    nearbyDrivers.forEach(async (driver) => {
+    nearbyDrivers.forEach(driver => {
       const driverPrice = discountedPrices[driver.vehicleType];
       if (driverPrice) {
-        driverNamespace.to(driver._id.toString()).emit("newRideRequest", {
+        io.of("/driver").to(driver._id.toString()).emit("newRideRequest", {
           rideRequestId: rideRequest._id,
           pickupLocation,
           passengerName: passenger.username,
@@ -225,52 +200,39 @@ exports.createRideRequest = async (req, res) => {
           passengerImage: passenger.profile_url,
           dropLocation,
           distance,
-          price: driverPrice, // Driver sees full price
+          price: driverPrice,
           isShareable: isSharing,
           currentPassengers: rideRequest.currentPassengers,
-          maxPassengers: rideRequest.maxPassengers,
         });
-
-        if (driver.pushToken) {
-          await sendPushNotification(
-            driver.pushToken,
-            "New Ride Request",
-            `You have a new ${isSharing ? "shared" : ""} ride request`,
-            {
-              rideRequestId: rideRequest._id,
-              pickupLocation,
-              dropLocation,
-            }
-          );
-        }
       }
     });
 
-    // Set timeout for ride expiration (2 minutes)
+    // Set expiration timeout (2 minutes)
     setTimeout(async () => {
-      const updatedRideRequest = await RideRequest.findById(rideRequest._id);
-      if (updatedRideRequest.status === "pending") {
-        updatedRideRequest.status = "failed";
-        await updatedRideRequest.save();
+      const updatedRide = await RideRequest.findById(rideRequest._id);
+      if (updatedRide?.status === "pending") {
+        updatedRide.status = "failed";
+        await updatedRide.save();
         io.of("/passenger")
           .to(passengerId)
           .emit("rideRequestFailed", { rideRequestId: rideRequest._id });
       }
-    }, 2 * 60 * 1000);
+    }, 120000);
 
-    await session.commitTransaction();
     res.status(201).json({
       message: "Ride request created successfully",
       rideRequestId: rideRequest._id,
-      price: isSharing
-        ? discountedPrices[vehicleType] // Initially full price (will split when others join)
+      price: isSharing 
+        ? discountedPrices[vehicleType] // Full price shown initially (will split later)
         : discountedPrices[vehicleType],
     });
+
   } catch (error) {
     console.error("Error creating ride request:", error);
-    res
-      .status(500)
-      .json({ message: "Error creating ride request", error: error.message });
+    res.status(500).json({ 
+      message: "Error creating ride request", 
+      error: error.message 
+    });
   }
 };
 
