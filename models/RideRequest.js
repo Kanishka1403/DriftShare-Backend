@@ -57,18 +57,7 @@ const RideRequestSchema = new mongoose.Schema({
     comment: String
   },
   createdAt: { type: Date, default: Date.now },
-  completedAt: { type: Date },
-  isShareable: { type: Boolean, default: false },
-  currentPassengers: { type: Number, default: 1 },
-  maxPassengers: { type: Number, default: 1 },
-  totalDiscountedPrices: { 
-    type: Map,
-    of: Number 
-  },
-  perPassengerPrices: {
-    type: Map,
-    of: Number 
-  },
+  completedAt: { type: Date }
 });
 
 RideRequestSchema.index({ pickupLocation: '2dsphere' });
