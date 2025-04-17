@@ -1,11 +1,12 @@
 const admin = require('firebase-admin');
 
-let serviceAccount;
-if (process.env.FIREBASE_CONFIG) {
-  serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_CONFIG, 'base64').toString('ascii'));
-} else {
-  serviceAccount = require('./gooto-app-firebase-adminsdk-7umvg-a9130b33d2.json');
-}
+// let serviceAccount;
+// if (process.env.FIREBASE_CONFIG) {
+//   serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_CONFIG, 'base64').toString('ascii'));
+// } else {
+//   serviceAccount = require('./driftshare-85ffb-firebase-adminsdk-a46wu-2461d15ba7.json');
+// }
+var serviceAccount = require("./driftshare-85ffb-firebase-adminsdk-a46wu-2461d15ba7.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
