@@ -3,7 +3,7 @@ const Passenger = require('../models/Passenger');
 const Transaction = require('../models/Transaction');
 const RideRequest = require('../models/RideRequest');
 const { v4: uuidv4 } = require('uuid');
-const { sendPushNotification } = require('../utils/fcmUtils');
+// const { sendPushNotification } = require('../utils/fcmUtils');
 
 const AUTH_KEY = process.env.AUTH_KEY; // Store this securely, preferably in environment variables
 
@@ -46,12 +46,12 @@ exports.addFunds = async (req, res) => {
     user.transactionHistory.push(transaction._id);
     await user.save();
     if (user.pushToken) {
-   await sendPushNotification(
-      user.pushToken,
-      'Payment Received',
-      `You have received ${amount.toFixed(2)} as a payment`,
-      { type: 'payment_received' }
-   );
+  //  await sendPushNotification(
+  //     user.pushToken,
+  //     'Payment Received',
+  //     `You have received ${amount.toFixed(2)} as a payment`,
+  //     { type: 'payment_received' }
+  //  );
    console.log('Push notification sent to user');
     }
     res.status(200).json({ message: 'Funds added successfully', newBalance: user.walletBalance });
