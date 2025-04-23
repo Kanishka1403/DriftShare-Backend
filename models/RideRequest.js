@@ -1,83 +1,63 @@
-const mongoose = require('mongoose');
-const VehicleTypes = require('../enums/vehicle-type-enum');
-
 const RideRequestSchema = new mongoose.Schema({
-  passengers: [{ type: String, ref: "Passenger" }], // Changed from single passenger to array
-  passengerNames: [{ type: String }], // Store names of all passengers
-  passengerImages: [{ type: String }], // Store images of all passengers
-  passengerMobiles: [{ type: String }], // Store mobile numbers of all passengers
-  driver: { type: String, ref: "Driver" },
-  driverNumber: { type: String },
+  passenger: { type: String, ref: 'Passenger', required: true },
+  driver: { type: String, ref: 'Driver' },
+  driverNumber:{type: String},
+  passengerMobile:{type: String},
   driverImage: { type: String },
   driverName: { type: String },
+  passengerImage: { type: String },
+  passengerName: { type: String },
   originalPrices: {
     type: Map,
-    of: Number,
+    of: Number
   },
   discountedPrices: {
     type: Map,
-    of: Number,
+    of: Number
   },
   appliedDiscountPercentage: {
     type: Number,
-    default: 0,
+    default: 0
   },
   finalVehicleType: {
     type: String,
-    enum: Object.values(VehicleTypes),
+    enum: Object.values(VehicleTypes)
   },
   finalPrice: {
-    type: Number,
+    type: Number
   },
   vehicleType: {
     type: String,
     enum: Object.values(VehicleTypes),
-    required: true,
+    required: true
   },
   pickupLocation: {
-    type: { type: String, enum: ["Point"], required: true },
+    type: { type: String, enum: ['Point'], required: true },
     address: { type: String, required: true },
-    coordinates: { type: [Number], required: true },
+    coordinates: { type: [Number], required: true }
   },
   dropLocation: {
-    type: { type: String, enum: ["Point"], required: true },
+    type: { type: String, enum: ['Point'], required: true },
     address: { type: String, required: true },
-    coordinates: { type: [Number], required: true },
+    coordinates: { type: [Number], required: true }
   },
-  preferredGender: {
-    type: String,
-    enum: ["Male", "Female", "any"],
-    default: "any",
-  },
+  preferredGender: { type: String, enum: ['Male', 'Female', 'any'], default: 'any' }, // Added preferred gender field
+
   distance: { type: Number, required: true },
   price: { type: Number, required: false },
-  status: {
-    type: String,
-    enum: ["pending", "accepted", "in_progress", "completed", "cancelled", "failed"],
-    default: "pending",
-  },
-  paymentStatus: {
-    type: String,
-    enum: ["pending", "completed"],
-    default: "pending",
-  },
-  paymentMethod: {
-    type: String,
-    enum: ["wallet", "cash", "card"],
-  },
-  notifiedDrivers: [{ type: String, ref: "Driver" }],
+  status: { type: String, enum: ['pending', 'accepted', 'in_progress', 'completed', 'cancelled', 'failed'], default: 'pending' },
+  paymentStatus: { type: String, enum: ['pending', 'completed'], default: 'pending' },
+  paymentMethod: { type: String, enum: ['wallet', 'cash', 'card'] },
+  notifiedDrivers: [{ type: String, ref: 'Driver' }],
   feedback: {
     rating: { type: Number, min: 1, max: 5 },
-    comment: String,
+    comment: String
   },
-  carPooling: { type: Boolean, default: false }, // New field for pooling preference
-  isPooledRide: { type: Boolean, default: false }, // Indicates if this is a pooled ride
-  poolRequestIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "RideRequest" }], // Track related pooled ride requests
   createdAt: { type: Date, default: Date.now },
-  completedAt: { type: Date },
+  completedAt: { type: Date }
 });
 
-RideRequestSchema.index({ pickupLocation: "2dsphere" });
-RideRequestSchema.index({ dropLocation: "2dsphere" });
+RideRequestSchema.index({ pickupLocation: '2dsphere' });
+RideRequestSchema.index({ dropLocation: '2dsphere' });
 
-module.exports = mongoose.model("RideRequest", RideRequestSchema);
+module.exports = mongoose.model('RideRequest', RideRequestSchema);

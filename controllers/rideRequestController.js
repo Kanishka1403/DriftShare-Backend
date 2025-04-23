@@ -99,20 +99,20 @@ exports.createRideRequest = async (req, res) => {
 
     // Check for poolable rides if carPooling is true
     let poolableRide = null;
-    if (carPooling) {
-      poolableRide = await findPoolableRide(
-        pickupLocation,
-        dropLocation,
-        vehicleType,
-        preferredGender
-      );
-    }
+    // if (carPooling) {
+    //   poolableRide = await findPoolableRide(
+    //     pickupLocation,
+    //     dropLocation,
+    //     vehicleType,
+    //     preferredGender
+    //   );
+    // }
 
     const rideRequest = new RideRequest({
-      passengers: [passengerId],
-      passengerNames: [passenger.username],
-      passengerImages: [passenger.profile_url],
-      passengerMobiles: [passengerMobile],
+      paymentMethod,
+      passenger: passengerId,
+      passengerName: passenger.username,
+      passengerImage: passenger.profile_url,
       vehicleType,
       pickupLocation: {
         type: "Point",
@@ -133,12 +133,9 @@ exports.createRideRequest = async (req, res) => {
         ])
       ),
       appliedDiscountPercentage: discountPercentage,
-      paymentMethod,
-      status: poolableRide ? "pending_pool" : "pending", // New status for pooling
-      preferredGender,
-      carPooling,
-      isPooledRide: !!poolableRide,
-      poolRequestIds: poolableRide ? [poolableRide._id] : [],
+      passengerMobile,
+      status: "pending",
+      preferredGender
     });
     await rideRequest.save();
 
