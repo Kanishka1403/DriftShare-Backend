@@ -76,12 +76,12 @@ const init = (socketIo) => {
           });
               // Send push notification to passenger
       if (rideRequest.passenger.pushToken) {
-        await sendPushNotification(
-          rideRequest.passenger.pushToken,
-          'Ride Accepted',
-          `${driver.username} has accepted your ride request!`,
-          { rideRequestId: rideRequestId.toString(), type: 'ride_accepted' }
-        );
+        // await sendPushNotification(
+        //   rideRequest.passenger.pushToken,
+        //   'Ride Accepted',
+        //   `${driver.username} has accepted your ride request!`,
+        //   { rideRequestId: rideRequestId.toString(), type: 'ride_accepted' }
+        // );
       }
           socket.emit('rideAcceptedConfirmation', { rideRequestId });
         }
@@ -97,12 +97,12 @@ const init = (socketIo) => {
         if (rideRequest) {
           passengerNamespace.to(rideRequest.passenger.toString()).emit('driverArrived', { rideRequestId });
           if (rideRequest.passenger.pushToken) {
-            await sendPushNotification(
-              rideRequest.passenger.pushToken,
-              'Driver Arrived',
-              'Your driver has arrived at the pickup location.',
-              { rideRequestId: rideRequestId.toString(), type: 'driver_arrived' }
-            );
+            // await sendPushNotification(
+            //   rideRequest.passenger.pushToken,
+            //   'Driver Arrived',
+            //   'Your driver has arrived at the pickup location.',
+            //   { rideRequestId: rideRequestId.toString(), type: 'driver_arrived' }
+            // );
           }
         }
       } catch (error) {
@@ -120,12 +120,12 @@ const init = (socketIo) => {
         if (rideRequest) {
           passengerNamespace.to(rideRequest.passenger.toString()).emit('rideStarted', { rideRequestId });
           if (rideRequest.passenger.pushToken) {
-            await sendPushNotification(
-              rideRequest.passenger.pushToken,
-              'Ride Started',
-              'Your ride has started.',
-              { rideRequestId: rideRequestId.toString(), type: 'ride_started' }
-            );
+            // await sendPushNotification(
+            //   rideRequest.passenger.pushToken,
+            //   'Ride Started',
+            //   'Your ride has started.',
+            //   { rideRequestId: rideRequestId.toString(), type: 'ride_started' }
+            // );
           }
         }
       } catch (error) {
@@ -149,22 +149,22 @@ const init = (socketIo) => {
           passengerNamespace.to(rideRequest.passenger.toString()).emit('rideCompleted', { rideRequestId });
           socket.emit('rideCompletedConfirmation', { rideRequestId });
           if (rideRequest.passenger.pushToken) {
-            await sendPushNotification(
-              rideRequest.passenger.pushToken,
-              'Ride Completed',
-              'Your ride has been completed. Thanks for riding with us!',
-              { rideRequestId: rideRequestId.toString(), type: 'ride_completed' }
-            );
+            // await sendPushNotification(
+            //   rideRequest.passenger.pushToken,
+            //   'Ride Completed',
+            //   'Your ride has been completed. Thanks for riding with us!',
+            //   { rideRequestId: rideRequestId.toString(), type: 'ride_completed' }
+            // );
           }
     
           // Send push notification to driver
           if (driver.pushToken) {
-            await sendPushNotification(
-              driver.pushToken,
-              'Ride Completed',
-              'You have completed the ride. Great job!',
-              { rideRequestId: rideRequestId.toString(), type: 'ride_completed' }
-            );
+            // await sendPushNotification(
+            //   driver.pushToken,
+            //   'Ride Completed',
+            //   'You have completed the ride. Great job!',
+            //   { rideRequestId: rideRequestId.toString(), type: 'ride_completed' }
+            // );
           }
         }
       } catch (error) {

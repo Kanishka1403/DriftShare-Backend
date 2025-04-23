@@ -8,7 +8,7 @@ const Passenger = require("../models/Passenger");
 const Price = require("../models/Price");
 const Discount = require("../models/Discount");
 const VehicleTypes = require("../enums/vehicle-type-enum");
-const { sendPushNotification } = require("../utils/fcmUtils");
+// const { sendPushNotification } = require("../utils/fcmUtils");
 const Transaction = require('../models/Transaction');
 const { v4: uuidv4 } = require('uuid');
 
@@ -166,15 +166,15 @@ exports.createRideRequest = async (req, res) => {
           price: driverPrice / (existingRide.passengers.length + 1), // Split fare
         });
         if (driver.pushToken) {
-          await sendPushNotification(
-            driver.pushToken,
-            "New Pooling Request",
-            "A passenger wants to share your current ride",
-            {
-              rideRequestId: rideRequest._id,
-              existingRideId: poolableRide._id,
-            }
-          );
+          // await sendPushNotification(
+          //   driver.pushToken,
+          //   "New Pooling Request",
+          //   "A passenger wants to share your current ride",
+          //   {
+          //     rideRequestId: rideRequest._id,
+          //     existingRideId: poolableRide._id,
+          //   }
+          // );
         }
       }
     } else {
@@ -200,16 +200,16 @@ exports.createRideRequest = async (req, res) => {
             price: driverPrice,
           });
           if (driver.pushToken) {
-            await sendPushNotification(
-              driver.pushToken,
-              "New Ride Request",
-              "You have a new ride request",
-              {
-                rideRequestId: rideRequest._id,
-                pickupLocation,
-                dropLocation,
-              }
-            );
+            // await sendPushNotification(
+            //   driver.pushToken,
+            //   "New Ride Request",
+            //   "You have a new ride request",
+            //   {
+            //     rideRequestId: rideRequest._id,
+            //     pickupLocation,
+            //     dropLocation,
+            //   }
+            // );
           }
         }
       });
@@ -342,11 +342,11 @@ exports.acceptPoolRequest = async (req, res) => {
 
     const passenger = await Passenger.findById(rideRequest.passengers[0]);
     if (passenger.pushToken) {
-      await sendPushNotification(
-        passenger.pushToken,
-        "Pooling Request Accepted",
-        "Your pooling request has been accepted"
-      );
+      // await sendPushNotification(
+      //   passenger.pushToken,
+      //   "Pooling Request Accepted",
+      //   "Your pooling request has been accepted"
+      // );
     }
 
     res.status(200).json({
@@ -463,11 +463,11 @@ exports.acceptRideRequest = async (req, res) => {
 
       const passenger = await Passenger.findById(rideRequest.passengers[0]);
       if (passenger.pushToken) {
-        await sendPushNotification(
-          passenger.pushToken,
-          "Pooling Request Accepted",
-          "Your pooling request has been accepted"
-        );
+        // await sendPushNotification(
+        //   passenger.pushToken,
+        //   "Pooling Request Accepted",
+        //   "Your pooling request has been accepted"
+        // );
       }
     } else {
       // Handle regular ride request
@@ -499,11 +499,11 @@ exports.acceptRideRequest = async (req, res) => {
 
       const passenger = await Passenger.findById(rideRequest.passengers[0]);
       if (passenger.pushToken) {
-        await sendPushNotification(
-          passenger.pushToken,
-          "Ride is Accepted",
-          "Your ride is accepted"
-        );
+        // await sendPushNotification(
+        //   passenger.pushToken,
+        //   "Ride is Accepted",
+        //   "Your ride is accepted"
+        // );
       }
 
       const driverNamespace = io.of("/driver");
@@ -661,11 +661,11 @@ exports.completeRide = async (req, res) => {
         .emit("rideCompleted", { rideRequestId });
       const passenger = await Passenger.findById(passengerId);
       if (passenger.pushToken) {
-        await sendPushNotification(
-          passenger.pushToken,
-          "Ride is Completed",
-          "Thank you for using our service"
-        );
+        // await sendPushNotification(
+        //   passenger.pushToken,
+        //   "Ride is Completed",
+        //   "Thank you for using our service"
+        // );
       }
     }
 
