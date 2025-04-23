@@ -38,8 +38,6 @@ exports.getRideRequestStatus = async (req, res) => {
 
 exports.createRideRequest = async (req, res) => {
   try {
-    console.log("▶️ Received ride request:", req.body);
-
     const {
       passengerId,
       pickupLocation,
@@ -48,22 +46,18 @@ exports.createRideRequest = async (req, res) => {
       passengerMobile,
       paymentMethod,
       vehicleType,
-      preferredGender = "any",
-      carPooling = false,
+      preferredGender = "any"
     } = req.body;
 
     if (!passengerId) {
-      console.warn("⚠️ Missing passengerId");
       return res.status(400).json({ message: "Passenger ID is required" });
     }
-
     const passenger = await Passenger.findById(passengerId);
+
     if (!passenger) {
-      console.warn("❌ Passenger not found:", passengerId);
       return res.status(404).json({ message: "Passenger not found" });
     }
-    console.log("✅ Passenger found:", passenger.username);
-
+    // Determine which vehicle types to consider
     let consideredTypes = [vehicleType];
     if (vehicleType === VehicleTypes.CAR_ANY) {
       consideredTypes = [
@@ -71,15 +65,14 @@ exports.createRideRequest = async (req, res) => {
         VehicleTypes.CAR_SEDAN,
         VehicleTypes.CAR_SUV,
       ];
-      console.log("🚗 Considering all car types:", consideredTypes);
     }
 
+    // Fetch prices for considered vehicle types
     const vehiclePrices = await Price.find({
       vehicleType: { $in: consideredTypes },
     });
-    console.log("💰 Fetched vehicle prices:", vehiclePrices);
-
     const discount = await Discount.findOne({ isActive: true });
+
     let discountPercentage = 0;
     if (
       discount &&
@@ -87,12 +80,13 @@ exports.createRideRequest = async (req, res) => {
       new Date() <= discount.validTo
     ) {
       discountPercentage = discount.percentage;
-      console.log("🏷️ Active discount applied:", discountPercentage, "%");
     }
 
-    const calculateDiscountedPrice = (basePrice) =>
-      basePrice - basePrice * (discountPercentage / 100);
+    const calculateDiscountedPrice = (basePrice) => {
+      return basePrice - basePrice * (discountPercentage / 100);
+    };
 
+    // Calculate prices for considered vehicle types
     const prices = {};
     const discountedPrices = {};
     vehiclePrices.forEach((vp) => {
@@ -100,26 +94,15 @@ exports.createRideRequest = async (req, res) => {
       prices[vp.vehicleType] = basePrice;
       discountedPrices[vp.vehicleType] = calculateDiscountedPrice(basePrice);
     });
-    console.log("💸 Calculated prices:", prices);
-    console.log("🔻 Discounted prices:", discountedPrices);
 
-    let poolableRide = null;
-    if (carPooling) {
-      console.log("🔍 Searching for poolable rides...");
-      poolableRide = await findPoolableRide(
-        pickupLocation,
-        dropLocation,
-        vehicleType,
-        preferredGender
-      );
-      console.log("🧍 Found poolable ride:", poolableRide ? poolableRide._id : "None");
-    }
+    console.log(`Original prices: ${JSON.stringify(prices)}`);
+    console.log(`Discounted prices: ${JSON.stringify(discountedPrices)}`);
 
     const rideRequest = new RideRequest({
-      passengers: [passengerId],
-      passengerNames: [passenger.username],
-      passengerImages: [passenger.profile_url],
-      passengerMobiles: [passengerMobile],
+      paymentMethod,
+      passenger: passengerId,
+      passengerName: passenger.username,
+      passengerImage: passenger.profile_url,
       vehicleType,
       pickupLocation: {
         type: "Point",
@@ -140,93 +123,79 @@ exports.createRideRequest = async (req, res) => {
         ])
       ),
       appliedDiscountPercentage: discountPercentage,
-      paymentMethod,
-      status: poolableRide ? "pending_pool" : "pending",
-      preferredGender,
-      carPooling,
-      isPooledRide: !!poolableRide,
-      poolRequestIds: poolableRide ? [poolableRide._id] : [],
+      passengerMobile,
+      status: "pending",
+      preferredGender
     });
-
     await rideRequest.save();
-    console.log("✅ Ride request saved:", rideRequest._id);
 
+    console.log(`New ride request created: ${rideRequest._id}`);
     await Passenger.findByIdAndUpdate(passengerId, {
       $push: { rideHistory: rideRequest._id },
     });
-    console.log("📜 Ride history updated for passenger:", passengerId);
+
+    const nearbyDrivers = await findNearbyDriversByVehicleType(
+      pickupLocation.lat,
+      pickupLocation.long,
+      vehicleType,
+      preferredGender
+    );
+    console.log(
+      `Found ${nearbyDrivers.length} nearby drivers for ${vehicleType}`
+    );
 
     const io = socketHandlers.getIO();
     const driverNamespace = io.of("/driver");
-
-    if (poolableRide) {
-      const existingRide = await RideRequest.findById(poolableRide._id);
-      if (existingRide.driver) {
-        const driver = await Driver.findById(existingRide.driver);
-        const driverPrice = discountedPrices[driver.vehicleType];
-        console.log("📡 Notifying driver (pool):", driver._id.toString());
-
-        driverNamespace.to(driver._id.toString()).emit("newPoolRequest", {
+    nearbyDrivers.forEach(async (driver) => {
+      console.log(`Notifying driver ${driver._id} about new ride request`);
+      const driverPrice = discountedPrices[driver.vehicleType];
+      if (driverPrice) {
+        driverNamespace.to(driver._id.toString()).emit("newRideRequest", {
           rideRequestId: rideRequest._id,
-          existingRideId: poolableRide._id,
           pickupLocation,
-          dropLocation,
           passengerName: passenger.username,
+          paymentMethod,
+          vehicleType: driver.vehicleType,
           passengerImage: passenger.profile_url,
+          dropLocation,
           distance,
-          price: driverPrice / (existingRide.passengers.length + 1),
+          price: driverPrice,
         });
-      }
-    } else {
-      const nearbyDrivers = await findNearbyDriversByVehicleType(
-        pickupLocation.lat,
-        pickupLocation.long,
-        vehicleType,
-        preferredGender
-      );
-      console.log("🧭 Nearby drivers found:", nearbyDrivers.length);
-
-      nearbyDrivers.forEach(async (driver) => {
-        const driverPrice = discountedPrices[driver.vehicleType];
-        if (driverPrice) {
-          driverNamespace.to(driver._id.toString()).emit("newRideRequest", {
-            rideRequestId: rideRequest._id,
-            pickupLocation,
-            passengerName: passenger.username,
-            paymentMethod,
-            vehicleType: driver.vehicleType,
-            passengerImage: passenger.profile_url,
-            dropLocation,
-            distance,
-            price: driverPrice,
-          });
+        if (driver.pushToken) {
+          console.log("Sending push notification to driver");
+          // await sendPushNotification(
+          //   driver.pushToken,
+          //   "New Ride Request",
+          //   "You have a new ride request",
+          //   {
+          //     rideRequestId: rideRequest._id,
+          //     pickupLocation,
+          //     dropLocation,
+          //   },
+          // );
+          console.log("Push notification sent to driver");
         }
-      });
-    }
+      }
+    });
 
-    // Auto-expire logic
+    // Set timeout for ride request expiration
     setTimeout(async () => {
       const updatedRideRequest = await RideRequest.findById(rideRequest._id);
-      if (
-        updatedRideRequest.status === "pending" ||
-        updatedRideRequest.status === "pending_pool"
-      ) {
+      if (updatedRideRequest.status === "pending") {
         updatedRideRequest.status = "failed";
         await updatedRideRequest.save();
-        console.log("⏱️ Ride request expired:", rideRequest._id);
         io.of("/passenger")
           .to(passengerId)
           .emit("rideRequestFailed", { rideRequestId: rideRequest._id });
       }
-    }, 2 * 60 * 1000);
+    }, 2 * 60 * 1000); // 2 minutes
 
     res.status(201).json({
       message: "Ride request created successfully",
       rideRequestId: rideRequest._id,
-      isPooledRide: !!poolableRide,
     });
   } catch (error) {
-    console.error("🔥 Error creating ride request:", error);
+    console.error("Error creating ride request:", error);
     res
       .status(500)
       .json({ message: "Error creating ride request", error: error.message });
