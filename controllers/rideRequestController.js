@@ -368,14 +368,29 @@ exports.acceptRideRequest = async (req, res) => {
     const rideRequest = await RideRequest.findById(rideRequestId);
 
     if (!driver || !rideRequest) {
-      return res.status(404).json({ message: "Driver or ride request not found" });
+      return res
+        .status(404)
+        .json({ message: "Driver or ride request not found" });
     }
 
-    if (rideRequest.status !== "pending" && rideRequest.status !== "pending_pool") {
-      return res.status(400).json({ message: "Ride request is no longer pending or pending_pool" });
+    if (rideRequest.status !== "pending") {
+      return res
+        .status(400)
+        .json({ message: "Ride request is no longer pending" });
     }
 
-    const discountedPrices = JSON.parse(JSON.stringify(rideRequest.discountedPrices));
+    console.log("Driver vehicle type:", driver.vehicleType);
+    console.log("Ride request vehicle type:", rideRequest.vehicleType);
+    console.log(
+      "Discounted prices:",
+      JSON.stringify(rideRequest.discountedPrices)
+    );
+
+    // Ensure discountedPrices is a plain object
+    const discountedPrices = JSON.parse(
+      JSON.stringify(rideRequest.discountedPrices)
+    );
+
     let finalPrice;
 
     if (typeof discountedPrices === "object" && discountedPrices !== null) {
@@ -385,11 +400,14 @@ exports.acceptRideRequest = async (req, res) => {
         finalPrice = discountedPrices[rideRequest.vehicleType];
       }
 
+      // If finalPrice is still undefined, try to find any valid price
       if (finalPrice === undefined) {
         const prices = Object.values(discountedPrices);
         finalPrice = prices.length > 0 ? prices[0] : undefined;
       }
     }
+
+    console.log("Calculated final price:", finalPrice);
 
     if (finalPrice === undefined) {
       return res.status(400).json({
@@ -400,127 +418,57 @@ exports.acceptRideRequest = async (req, res) => {
       });
     }
 
+    rideRequest.driver = driverId;
+    rideRequest.status = "accepted";
+    rideRequest.driverImage = driver.profile_url;
+    rideRequest.driverName = driver.username;
+    rideRequest.driverNumber = driverNumber;
+    rideRequest.finalPrice = finalPrice;
+    rideRequest.finalVehicleType = driver.vehicleType;
+    await rideRequest.save();
+
+    driver.isAvailable = false;
+    driver.currentRide = rideRequestId;
+    await driver.save();
+
+    console.log(`Passenger ride accepted for ${rideRequest.passenger}`);
     const io = socketHandlers.getIO();
     const passengerNamespace = io.of("/passenger");
-
-    if (rideRequest.status === "pending_pool") {
-      // Handle pooling request
-      if (!rideRequest.poolRequestIds.length) {
-        return res.status(400).json({ message: "No existing ride linked for pooling" });
-      }
-
-      const existingRideId = rideRequest.poolRequestIds[0];
-      const existingRide = await RideRequest.findById(existingRideId);
-
-      if (!existingRide) {
-        return res.status(404).json({ message: "Existing ride not found" });
-      }
-
-      if (existingRide.driver.toString() !== driverId) {
-        return res.status(403).json({ message: "Only the assigned driver can accept this pooling request" });
-      }
-
-      // Update new ride request
-      rideRequest.status = "accepted";
-      rideRequest.driver = driverId;
-      rideRequest.driverImage = driver.profile_url;
-      rideRequest.driverName = driver.username;
-      rideRequest.driverNumber = driverNumber;
-      rideRequest.finalPrice = finalPrice / (existingRide.passengers.length + 1); // Split fare
-      rideRequest.finalVehicleType = driver.vehicleType;
-      await rideRequest.save();
-
-      // Update existing ride
-      existingRide.passengers.push(rideRequest.passengers[0]);
-      existingRide.passengerNames.push(rideRequest.passengerNames[0]);
-      existingRide.passengerImages.push(rideRequest.passengerImages[0]);
-      existingRide.passengerMobiles.push(rideRequest.passengerMobiles[0]);
-      existingRide.isPooledRide = true;
-      existingRide.poolRequestIds.push(rideRequest._id);
-      existingRide.finalPrice = finalPrice / existingRide.passengers.length; // Update fare for all
-      await existingRide.save();
-
-      // Notify all passengers in the existing ride
-      existingRide.passengers.forEach((passengerId) => {
-        passengerNamespace.to(passengerId.toString()).emit("poolRequestAccepted", {
-          rideRequestId: existingRide._id,
-          newPassengerName: rideRequest.passengerNames[0],
-          newPassengerImage: rideRequest.passengerImages[0],
-          updatedPrice: existingRide.finalPrice,
-        });
-      });
-
-      // Notify the new passenger
-      passengerNamespace.to(rideRequest.passengers[0].toString()).emit("rideRequestAccepted", {
-        rideRequestId: rideRequest._id,
+    passengerNamespace
+      .to(rideRequest.passenger.toString())
+      .emit("rideRequestAccepted", {
+        rideRequestId: rideRequestId,
         driverId: driverId,
         driverLocation: driver.location,
         driverName: driver.username,
         driverImage: driver.profile_url,
-        finalPrice: rideRequest.finalPrice,
-        finalVehicleType: rideRequest.finalVehicleType,
+        finalPrice: finalPrice,
+        finalVehicleType: driver.vehicleType,
       });
-
-      const passenger = await Passenger.findById(rideRequest.passengers[0]);
-      if (passenger.pushToken) {
-        // await sendPushNotification(
-        //   passenger.pushToken,
-        //   "Pooling Request Accepted",
-        //   "Your pooling request has been accepted"
-        // );
-      }
-    } else {
-      // Handle regular ride request
-      rideRequest.driver = driverId;
-      rideRequest.status = "accepted";
-      rideRequest.driverImage = driver.profile_url;
-      rideRequest.driverName = driver.username;
-      rideRequest.driverNumber = driverNumber;
-      rideRequest.finalPrice = finalPrice;
-      rideRequest.finalVehicleType = driver.vehicleType;
-      await rideRequest.save();
-
-      driver.isAvailable = false;
-      driver.currentRide = rideRequestId;
-      await driver.save();
-
-      // Notify all passengers (usually just one for non-pooled rides)
-      rideRequest.passengers.forEach((passengerId) => {
-        passengerNamespace.to(passengerId.toString()).emit("rideRequestAccepted", {
-          rideRequestId: rideRequestId,
-          driverId: driverId,
-          driverLocation: driver.location,
-          driverName: driver.username,
-          driverImage: driver.profile_url,
-          finalPrice: rideRequest.finalPrice,
-          finalVehicleType: driver.vehicleType,
-        });
-      });
-
-      const passenger = await Passenger.findById(rideRequest.passengers[0]);
-      if (passenger.pushToken) {
-        // await sendPushNotification(
-        //   passenger.pushToken,
-        //   "Ride is Accepted",
-        //   "Your ride is accepted"
-        // );
-      }
-
-      const driverNamespace = io.of("/driver");
-      driverNamespace.emit("rideRequestTaken", {
-        rideRequestId: rideRequestId,
-        message: "This ride has been accepted by another driver",
-      });
+    const passenger = await Passenger.findById(rideRequest.passenger);
+    if (passenger.pushToken) {
+      // sendPushNotification(
+      //   passenger.pushToken,
+      //   "Ride is Accepted",
+      //   "Your ride is acceepted"
+      // );
     }
+    const driverNamespace = io.of("/driver");
+    driverNamespace.emit("rideRequestTaken", {
+      rideRequestId: rideRequestId,
+      message: "This ride has been accepted by another driver",
+    });
 
     res.status(200).json({
       message: "Ride request accepted successfully",
-      finalPrice: rideRequest.finalPrice,
-      finalVehicleType: rideRequest.finalVehicleType,
+      finalPrice: finalPrice,
+      finalVehicleType: driver.vehicleType,
     });
   } catch (error) {
     console.error("Error accepting ride request:", error);
-    res.status(500).json({ message: "Error accepting ride request", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error accepting ride request", error: error.message });
   }
 };
 
