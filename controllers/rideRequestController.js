@@ -8,7 +8,7 @@ const Passenger = require("../models/Passenger");
 const Price = require("../models/Price");
 const Discount = require("../models/Discount");
 const VehicleTypes = require("../enums/vehicle-type-enum");
-// const { sendPushNotification } = require("../utils/fcmUtils");
+const { sendPushNotification } = require("../utils/fcmUtils");
 const Transaction = require('../models/Transaction');
 const { v4: uuidv4 } = require('uuid');
 
@@ -46,7 +46,8 @@ exports.createRideRequest = async (req, res) => {
       passengerMobile,
       paymentMethod,
       vehicleType,
-      preferredGender = "any"
+      preferredGender = "any",
+      carPooling = false, // New field from frontend
     } = req.body;
 
     if (!passengerId) {
@@ -57,6 +58,7 @@ exports.createRideRequest = async (req, res) => {
     if (!passenger) {
       return res.status(404).json({ message: "Passenger not found" });
     }
+
     // Determine which vehicle types to consider
     let consideredTypes = [vehicleType];
     if (vehicleType === VehicleTypes.CAR_ANY) {
@@ -95,14 +97,22 @@ exports.createRideRequest = async (req, res) => {
       discountedPrices[vp.vehicleType] = calculateDiscountedPrice(basePrice);
     });
 
-    console.log(`Original prices: ${JSON.stringify(prices)}`);
-    console.log(`Discounted prices: ${JSON.stringify(discountedPrices)}`);
+    // Check for poolable rides if carPooling is true
+    let poolableRide = null;
+    if (carPooling) {
+      poolableRide = await findPoolableRide(
+        pickupLocation,
+        dropLocation,
+        vehicleType,
+        preferredGender
+      );
+    }
 
     const rideRequest = new RideRequest({
-      paymentMethod,
-      passenger: passengerId,
-      passengerName: passenger.username,
-      passengerImage: passenger.profile_url,
+      passengers: [passengerId],
+      passengerNames: [passenger.username],
+      passengerImages: [passenger.profile_url],
+      passengerMobiles: [passengerMobile],
       vehicleType,
       pickupLocation: {
         type: "Point",
@@ -123,65 +133,92 @@ exports.createRideRequest = async (req, res) => {
         ])
       ),
       appliedDiscountPercentage: discountPercentage,
-      passengerMobile,
-      status: "pending",
-      preferredGender
+      paymentMethod,
+      status: poolableRide ? "pending_pool" : "pending", // New status for pooling
+      preferredGender,
+      carPooling,
+      isPooledRide: !!poolableRide,
+      poolRequestIds: poolableRide ? [poolableRide._id] : [],
     });
     await rideRequest.save();
 
-    console.log(`New ride request created: ${rideRequest._id}`);
     await Passenger.findByIdAndUpdate(passengerId, {
       $push: { rideHistory: rideRequest._id },
     });
 
-    const nearbyDrivers = await findNearbyDriversByVehicleType(
-      pickupLocation.lat,
-      pickupLocation.long,
-      vehicleType,
-      preferredGender
-    );
-    console.log(
-      `Found ${nearbyDrivers.length} nearby drivers for ${vehicleType}`
-    );
-
     const io = socketHandlers.getIO();
     const driverNamespace = io.of("/driver");
-    nearbyDrivers.forEach(async (driver) => {
-      console.log(`Notifying driver ${driver._id} about new ride request`);
-      const driverPrice = discountedPrices[driver.vehicleType];
-      if (driverPrice) {
-        driverNamespace.to(driver._id.toString()).emit("newRideRequest", {
+
+    if (poolableRide) {
+      // Notify the driver of the existing ride about the pooling request
+      const existingRide = await RideRequest.findById(poolableRide._id);
+      if (existingRide.driver) {
+        const driver = await Driver.findById(existingRide.driver);
+        const driverPrice = discountedPrices[driver.vehicleType];
+        driverNamespace.to(driver._id.toString()).emit("newPoolRequest", {
           rideRequestId: rideRequest._id,
+          existingRideId: poolableRide._id,
           pickupLocation,
-          passengerName: passenger.username,
-          paymentMethod,
-          vehicleType: driver.vehicleType,
-          passengerImage: passenger.profile_url,
           dropLocation,
+          passengerName: passenger.username,
+          passengerImage: passenger.profile_url,
           distance,
-          price: driverPrice,
+          price: driverPrice / (existingRide.passengers.length + 1), // Split fare
         });
         if (driver.pushToken) {
-          console.log("Sending push notification to driver");
-          // await sendPushNotification(
-          //   driver.pushToken,
-          //   "New Ride Request",
-          //   "You have a new ride request",
-          //   {
-          //     rideRequestId: rideRequest._id,
-          //     pickupLocation,
-          //     dropLocation,
-          //   },
-          // );
-          console.log("Push notification sent to driver");
+          await sendPushNotification(
+            driver.pushToken,
+            "New Pooling Request",
+            "A passenger wants to share your current ride",
+            {
+              rideRequestId: rideRequest._id,
+              existingRideId: poolableRide._id,
+            }
+          );
         }
       }
-    });
+    } else {
+      // Normal ride request: notify nearby drivers
+      const nearbyDrivers = await findNearbyDriversByVehicleType(
+        pickupLocation.lat,
+        pickupLocation.long,
+        vehicleType,
+        preferredGender
+      );
+      nearbyDrivers.forEach(async (driver) => {
+        const driverPrice = discountedPrices[driver.vehicleType];
+        if (driverPrice) {
+          driverNamespace.to(driver._id.toString()).emit("newRideRequest", {
+            rideRequestId: rideRequest._id,
+            pickupLocation,
+            passengerName: passenger.username,
+            paymentMethod,
+            vehicleType: driver.vehicleType,
+            passengerImage: passenger.profile_url,
+            dropLocation,
+            distance,
+            price: driverPrice,
+          });
+          if (driver.pushToken) {
+            await sendPushNotification(
+              driver.pushToken,
+              "New Ride Request",
+              "You have a new ride request",
+              {
+                rideRequestId: rideRequest._id,
+                pickupLocation,
+                dropLocation,
+              }
+            );
+          }
+        }
+      });
+    }
 
     // Set timeout for ride request expiration
     setTimeout(async () => {
       const updatedRideRequest = await RideRequest.findById(rideRequest._id);
-      if (updatedRideRequest.status === "pending") {
+      if (updatedRideRequest.status === "pending" || updatedRideRequest.status === "pending_pool") {
         updatedRideRequest.status = "failed";
         await updatedRideRequest.save();
         io.of("/passenger")
@@ -193,6 +230,7 @@ exports.createRideRequest = async (req, res) => {
     res.status(201).json({
       message: "Ride request created successfully",
       rideRequestId: rideRequest._id,
+      isPooledRide: !!poolableRide,
     });
   } catch (error) {
     console.error("Error creating ride request:", error);
@@ -304,11 +342,11 @@ exports.acceptPoolRequest = async (req, res) => {
 
     const passenger = await Passenger.findById(rideRequest.passengers[0]);
     if (passenger.pushToken) {
-      // await sendPushNotification(
-      //   passenger.pushToken,
-      //   "Pooling Request Accepted",
-      //   "Your pooling request has been accepted"
-      // );
+      await sendPushNotification(
+        passenger.pushToken,
+        "Pooling Request Accepted",
+        "Your pooling request has been accepted"
+      );
     }
 
     res.status(200).json({
@@ -425,11 +463,11 @@ exports.acceptRideRequest = async (req, res) => {
 
       const passenger = await Passenger.findById(rideRequest.passengers[0]);
       if (passenger.pushToken) {
-        // await sendPushNotification(
-        //   passenger.pushToken,
-        //   "Pooling Request Accepted",
-        //   "Your pooling request has been accepted"
-        // );
+        await sendPushNotification(
+          passenger.pushToken,
+          "Pooling Request Accepted",
+          "Your pooling request has been accepted"
+        );
       }
     } else {
       // Handle regular ride request
@@ -461,11 +499,11 @@ exports.acceptRideRequest = async (req, res) => {
 
       const passenger = await Passenger.findById(rideRequest.passengers[0]);
       if (passenger.pushToken) {
-        // await sendPushNotification(
-        //   passenger.pushToken,
-        //   "Ride is Accepted",
-        //   "Your ride is accepted"
-        // );
+        await sendPushNotification(
+          passenger.pushToken,
+          "Ride is Accepted",
+          "Your ride is accepted"
+        );
       }
 
       const driverNamespace = io.of("/driver");
@@ -623,11 +661,11 @@ exports.completeRide = async (req, res) => {
         .emit("rideCompleted", { rideRequestId });
       const passenger = await Passenger.findById(passengerId);
       if (passenger.pushToken) {
-        // await sendPushNotification(
-        //   passenger.pushToken,
-        //   "Ride is Completed",
-        //   "Thank you for using our service"
-        // );
+        await sendPushNotification(
+          passenger.pushToken,
+          "Ride is Completed",
+          "Thank you for using our service"
+        );
       }
     }
 
