@@ -1,3 +1,6 @@
+const mongoose = require('mongoose');
+const VehicleTypes = require('../enums/vehicle-type-enum');
+
 const RideRequestSchema = new mongoose.Schema({
   passenger: { type: String, ref: 'Passenger', required: true },
   driver: { type: String, ref: 'Driver' },

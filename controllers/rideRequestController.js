@@ -344,7 +344,7 @@ exports.acceptPoolRequest = async (req, res) => {
       //   "Pooling Request Accepted",
       //   "Your pooling request has been accepted"
       // );
-      
+
     }
 
     res.status(200).json({
